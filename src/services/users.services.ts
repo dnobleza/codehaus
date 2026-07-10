@@ -3,9 +3,12 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import * as refreshTokensRepository from '../repositories/refreshTokens.repository';
 import * as usersRepository from '../repositories/users.repository';
+import * as storageServices from './storage.services';
+import type { Pagination } from '../types/common';
 import { AppError, constantTimeEqual, hashToken } from '../utils/helper';
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt.util';
 import logger from '../utils/logger';
+import { assertHasUpdateFields, rethrowDuplicate } from '../utils/serviceHelpers';
 
 const SALT_ROUNDS = Number(process.env.BCRYPT_SALT_ROUNDS) || 12;
 
@@ -27,6 +30,7 @@ export interface PublicUser {
   email: string;
   role: 'client' | 'admin';
   status: 'active' | 'inactive' | 'pending';
+  avatarUrl: string | null;
 }
 
 export interface AuthResult {
@@ -42,6 +46,7 @@ interface IssuableUser {
   role: 'client' | 'admin';
   firstName: string;
   lastName: string;
+  avatarUrl: string | null;
 }
 
 const issueTokenPair = async (user: IssuableUser): Promise<AuthResult> => {
@@ -73,6 +78,7 @@ const issueTokenPair = async (user: IssuableUser): Promise<AuthResult> => {
       email: user.email,
       role: user.role,
       status: 'active',
+      avatarUrl: user.avatarUrl,
     },
   };
 };
@@ -105,12 +111,10 @@ export const registerUser = async (input: RegisterInput): Promise<AuthResult> =>
       role: 'client',
       firstName: input.firstName,
       lastName: input.lastName,
+      avatarUrl: null,
     });
   } catch (error) {
-    if ((error as { code?: string }).code === 'ER_DUP_ENTRY') {
-      throw new AppError('Email is already registered', 409, 'REGISTRATION');
-    }
-    throw error;
+    return rethrowDuplicate(error, 'Email is already registered', 'REGISTRATION');
   }
 };
 
@@ -135,6 +139,7 @@ export const loginUser = async (email: string, password: string): Promise<AuthRe
     role: user.role,
     firstName: user.first_name,
     lastName: user.last_name,
+    avatarUrl: user.avatar_url,
   });
 };
 
@@ -173,6 +178,7 @@ export const refreshTokens = async (rawRefreshToken: string): Promise<AuthResult
     role: user.role,
     firstName: user.first_name,
     lastName: user.last_name,
+    avatarUrl: user.avatar_url,
   });
 };
 
@@ -198,6 +204,7 @@ export const getCurrentUser = async (userId: number): Promise<PublicUser> => {
     email: user.email,
     role: user.role,
     status: user.status,
+    avatarUrl: user.avatar_url,
   };
 };
 
@@ -213,10 +220,7 @@ export const updateProfile = async (
   userId: number,
   input: UpdateProfileInput,
 ): Promise<PublicUser> => {
-  const hasAnyField = Object.values(input).some((value) => value !== undefined);
-  if (!hasAnyField) {
-    throw new AppError('At least one field must be provided', 400, 'PROFILE');
-  }
+  assertHasUpdateFields(input, 'PROFILE');
 
   const user = await usersRepository.findUserById(userId);
   if (!user) {
@@ -234,6 +238,7 @@ export const updateProfile = async (
     email: updated!.email,
     role: updated!.role,
     status: updated!.status,
+    avatarUrl: updated!.avatar_url,
   };
 };
 
@@ -274,7 +279,7 @@ export const deactivateSelf = async (userId: number, password: string): Promise<
 
 export interface PaginatedClients {
   clients: PublicUser[];
-  pagination: { page: number; limit: number; total: number };
+  pagination: Pagination;
 }
 
 const toPublicUser = (row: usersRepository.UserWithCredentialsRow): PublicUser => ({
@@ -285,6 +290,7 @@ const toPublicUser = (row: usersRepository.UserWithCredentialsRow): PublicUser =
   email: row.email,
   role: row.role,
   status: row.status,
+  avatarUrl: row.avatar_url,
 });
 
 export const listClients = async (page: number, limit: number): Promise<PaginatedClients> => {
@@ -332,4 +338,42 @@ export const deleteClient = async (userId: number): Promise<void> => {
   if (!deleted) {
     throw new AppError('Client not found', 404, 'ADMIN');
   }
+};
+
+export const updateAvatar = async (
+  userId: number,
+  file: Express.Multer.File,
+): Promise<PublicUser> => {
+  const user = await usersRepository.findUserById(userId);
+  if (!user) {
+    throw new AppError('User not found', 404, 'AVATAR');
+  }
+
+  const previousAvatarUrl = user.avatar_url;
+  const { url } = await storageServices.uploadImage(file.buffer, file.mimetype, 'avatars');
+  await usersRepository.updateRegistrationAvatarUrl(user.registration_uuid, url);
+
+  if (previousAvatarUrl) {
+    await storageServices.deleteImage(previousAvatarUrl);
+  }
+
+  const updated = await usersRepository.findUserById(userId);
+  return toPublicUser(updated!);
+};
+
+export const deleteAvatar = async (userId: number): Promise<PublicUser> => {
+  const user = await usersRepository.findUserById(userId);
+  if (!user) {
+    throw new AppError('User not found', 404, 'AVATAR');
+  }
+
+  if (!user.avatar_url) {
+    return toPublicUser(user);
+  }
+
+  await storageServices.deleteImage(user.avatar_url);
+  await usersRepository.updateRegistrationAvatarUrl(user.registration_uuid, null);
+
+  const updated = await usersRepository.findUserById(userId);
+  return toPublicUser(updated!);
 };

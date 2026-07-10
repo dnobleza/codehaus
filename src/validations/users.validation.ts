@@ -1,5 +1,6 @@
-import { body, param, query } from 'express-validator';
+import { body } from 'express-validator';
 import { isStrongPassword } from '../utils/helper';
+import { idParamValidation, paginationQueryValidation } from './shared.validation';
 
 const emailField = body('email')
   .trim()
@@ -54,14 +55,6 @@ export const deactivateValidation = [
   body('password').notEmpty().withMessage('password is required'),
 ];
 
-export const clientIdParamValidation = [
-  param('id').isInt({ min: 1 }).withMessage('id must be a positive integer'),
-];
+export const clientIdParamValidation = [...idParamValidation];
 
-export const listClientsValidation = [
-  query('page').optional().isInt({ min: 1 }).withMessage('page must be a positive integer'),
-  query('limit')
-    .optional()
-    .isInt({ min: 1, max: 100 })
-    .withMessage('limit must be between 1 and 100'),
-];
+export const listClientsValidation = [...paginationQueryValidation];
