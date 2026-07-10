@@ -5,6 +5,15 @@ import morgan from 'morgan';
 
 import { testConnection } from './config/database';
 import errorMiddleware from './middleware/error.middleware';
+import requestLogger from './middleware/requestLogger.middleware';
+import bundlesRouter from './routes/bundles.route';
+import featuresRouter from './routes/features.route';
+import paymentMethodsRouter from './routes/paymentMethods.route';
+import paymentsRouter from './routes/payments.route';
+import projectMilestonesRouter from './routes/projectMilestones.route';
+import projectUpdatesRouter from './routes/projectUpdates.route';
+import projectsRouter from './routes/projects.route';
+import quotationsRouter from './routes/quotations.route';
 import usersRouter from './routes/users.route';
 import logger from './utils/logger';
 
@@ -24,6 +33,8 @@ app.use(
   }),
 );
 
+app.use(requestLogger);
+
 app.get('/health', async (_req: Request, res: Response) => {
   const dbStatus = await testConnection();
 
@@ -39,6 +50,14 @@ app.get('/health', async (_req: Request, res: Response) => {
 });
 
 app.use('/api/users', usersRouter);
+app.use('/api/bundles', bundlesRouter);
+app.use('/api/features', featuresRouter);
+app.use('/api/quotations', quotationsRouter);
+app.use('/api/projects', projectsRouter);
+app.use('/api/project-updates', projectUpdatesRouter);
+app.use('/api/project-milestones', projectMilestonesRouter);
+app.use('/api/payments', paymentsRouter);
+app.use('/api/payment-methods', paymentMethodsRouter);
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({

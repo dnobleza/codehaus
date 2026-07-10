@@ -6,6 +6,7 @@ import {
   refreshLimiter,
   registerLimiter,
 } from '../middleware/ratelimiter.middleware';
+import { uploadSingleImage } from '../middleware/upload.middleware';
 import { validate } from '../middleware/validate.middleware';
 import {
   changePasswordValidation,
@@ -49,6 +50,19 @@ router.post(
   deactivateValidation,
   validate,
   usersController.deactivateSelf,
+);
+router.patch(
+  '/me/avatar',
+  authenticate,
+  authorize('client', 'admin'),
+  ...uploadSingleImage('avatar'),
+  usersController.updateAvatar,
+);
+router.delete(
+  '/me/avatar',
+  authenticate,
+  authorize('client', 'admin'),
+  usersController.deleteAvatar,
 );
 
 router.get(

@@ -1,0 +1,3 @@
+ALTER TABLE `registration` ADD COLUMN `avatar_url` VARCHAR(512) NULL DEFAULT NULL AFTER `status`;
+ALTER TABLE `bundles` ADD COLUMN `image_url` VARCHAR(512) NULL DEFAULT NULL AFTER `description`;
+ALTER TABLE `features` ADD COLUMN `image_url` VARCHAR(512) NULL DEFAULT NULL AFTER `description`;

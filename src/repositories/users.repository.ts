@@ -1,5 +1,6 @@
-import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import pool from '../config/database';
+import { buildUpdateSetClause, withTransaction } from '../utils/db';
 
 export interface RegistrationRow extends RowDataPacket {
   uuid: string;
@@ -22,6 +23,7 @@ export interface UserWithCredentialsRow extends RowDataPacket {
   status: 'active' | 'inactive' | 'pending';
   first_name: string;
   last_name: string;
+  avatar_url: string | null;
 }
 
 export const findRegistrationByEmail = async (email: string): Promise<RegistrationRow | null> => {
@@ -32,14 +34,19 @@ export const findRegistrationByEmail = async (email: string): Promise<Registrati
   return rows[0] ?? null;
 };
 
+// Shared SELECT + JOIN prefix for the 4 queries below. Kept as a static
+// template literal (no user input) so the produced SQL text stays identical
+// to the previously copy-pasted version.
+const USER_COLUMNS = `SELECT u.user_id, u.registration_uuid, u.role,
+            r.email, r.password_hash, r.status, r.first_name, r.last_name, r.avatar_url
+     FROM users u
+     INNER JOIN registration r ON r.uuid = u.registration_uuid`;
+
 export const findUserWithCredentialsByEmail = async (
   email: string,
 ): Promise<UserWithCredentialsRow | null> => {
   const [rows] = await pool.query<UserWithCredentialsRow[]>(
-    `SELECT u.user_id, u.registration_uuid, u.role,
-            r.email, r.password_hash, r.status, r.first_name, r.last_name
-     FROM users u
-     INNER JOIN registration r ON r.uuid = u.registration_uuid
+    `${USER_COLUMNS}
      WHERE r.email = ? LIMIT 1`,
     [email],
   );
@@ -48,10 +55,7 @@ export const findUserWithCredentialsByEmail = async (
 
 export const findUserById = async (userId: number): Promise<UserWithCredentialsRow | null> => {
   const [rows] = await pool.query<UserWithCredentialsRow[]>(
-    `SELECT u.user_id, u.registration_uuid, u.role,
-            r.email, r.password_hash, r.status, r.first_name, r.last_name
-     FROM users u
-     INNER JOIN registration r ON r.uuid = u.registration_uuid
+    `${USER_COLUMNS}
      WHERE u.user_id = ? LIMIT 1`,
     [userId],
   );
@@ -60,10 +64,7 @@ export const findUserById = async (userId: number): Promise<UserWithCredentialsR
 
 export const findClientById = async (userId: number): Promise<UserWithCredentialsRow | null> => {
   const [rows] = await pool.query<UserWithCredentialsRow[]>(
-    `SELECT u.user_id, u.registration_uuid, u.role,
-            r.email, r.password_hash, r.status, r.first_name, r.last_name
-     FROM users u
-     INNER JOIN registration r ON r.uuid = u.registration_uuid
+    `${USER_COLUMNS}
      WHERE u.user_id = ? AND u.role = 'client' LIMIT 1`,
     [userId],
   );
@@ -75,10 +76,7 @@ export const findClientsList = async (
   offset: number,
 ): Promise<UserWithCredentialsRow[]> => {
   const [rows] = await pool.query<UserWithCredentialsRow[]>(
-    `SELECT u.user_id, u.registration_uuid, u.role,
-            r.email, r.password_hash, r.status, r.first_name, r.last_name
-     FROM users u
-     INNER JOIN registration r ON r.uuid = u.registration_uuid
+    `${USER_COLUMNS}
      WHERE u.role = 'client'
      ORDER BY r.created_at DESC
      LIMIT ? OFFSET ?`,
@@ -125,14 +123,11 @@ export const updateRegistrationProfile = async (
   uuid: string,
   fields: UpdateProfileFields,
 ): Promise<void> => {
-  const entries = Object.entries(fields).filter(([, value]) => value !== undefined);
-  if (entries.length === 0) {
+  const built = buildUpdateSetClause(fields, PROFILE_FIELD_COLUMNS);
+  if (built === null) {
     return;
   }
-  const setClause = entries
-    .map(([key]) => `${PROFILE_FIELD_COLUMNS[key as keyof UpdateProfileFields]} = ?`)
-    .join(', ');
-  const values = entries.map(([, value]) => value);
+  const { setClause, values } = built;
   await pool.query(`UPDATE registration SET ${setClause}, updated_at = NOW() WHERE uuid = ?`, [
     ...values,
     uuid,
@@ -142,6 +137,16 @@ export const updateRegistrationProfile = async (
 export const updatePasswordHash = async (uuid: string, passwordHash: string): Promise<void> => {
   await pool.query('UPDATE registration SET password_hash = ?, updated_at = NOW() WHERE uuid = ?', [
     passwordHash,
+    uuid,
+  ]);
+};
+
+export const updateRegistrationAvatarUrl = async (
+  uuid: string,
+  avatarUrl: string | null,
+): Promise<void> => {
+  await pool.query('UPDATE registration SET avatar_url = ?, updated_at = NOW() WHERE uuid = ?', [
+    avatarUrl,
     uuid,
   ]);
 };
@@ -157,37 +162,26 @@ export const updateRegistrationStatus = async (
 };
 
 export const deleteClientByUserId = async (userId: number): Promise<boolean> => {
-  const connection: PoolConnection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    const [rows] = await connection.query<RowDataPacket[]>(
+  return withTransaction(async (conn) => {
+    const [rows] = await conn.query<RowDataPacket[]>(
       "SELECT registration_uuid FROM users WHERE user_id = ? AND role = 'client' LIMIT 1",
       [userId],
     );
     const registrationUuid = rows[0]?.registration_uuid as string | undefined;
     if (!registrationUuid) {
-      await connection.rollback();
       return false;
     }
-    await connection.query('DELETE FROM users WHERE user_id = ?', [userId]);
-    await connection.query('DELETE FROM registration WHERE uuid = ?', [registrationUuid]);
-    await connection.commit();
+    await conn.query('DELETE FROM users WHERE user_id = ?', [userId]);
+    await conn.query('DELETE FROM registration WHERE uuid = ?', [registrationUuid]);
     return true;
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };
 
 export const createRegistrationAndUser = async (
   input: CreateRegistrationInput,
 ): Promise<{ userId: number }> => {
-  const connection: PoolConnection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-    await connection.query(
+  return withTransaction(async (conn) => {
+    await conn.query(
       `INSERT INTO registration
         (uuid, first_name, middle_name, last_name, address, contact_no, email, password_hash, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')`,
@@ -202,16 +196,10 @@ export const createRegistrationAndUser = async (
         input.passwordHash,
       ],
     );
-    const [result] = await connection.query<ResultSetHeader>(
+    const [result] = await conn.query<ResultSetHeader>(
       "INSERT INTO users (registration_uuid, role) VALUES (?, 'client')",
       [input.uuid],
     );
-    await connection.commit();
     return { userId: result.insertId };
-  } catch (error) {
-    await connection.rollback();
-    throw error;
-  } finally {
-    connection.release();
-  }
+  });
 };

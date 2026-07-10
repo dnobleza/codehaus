@@ -1,20 +1,9 @@
 {
   "info": {
     "name": "Codehause API",
-    "description": "Auth (register/login/refresh/logout/me), client self-service (profile/password/deactivate), and admin client management (list/get/activate/deactivate/delete). Run top-to-bottom within a folder — requests auto-capture tokens/ids into collection variables.",
+    "description": "Auth (register/login/refresh/logout/me), client self-service (profile/password/deactivate), admin client management, bundle/feature catalog, client quotations, image uploads (avatar/bundle/feature) via Supabase Storage, and the post-approval Projects/Milestones/Payments lifecycle. Run top-to-bottom within a folder — requests auto-capture tokens/ids into the active environment. Select the \"Codehause - Local\" environment (postman/codehause.postman_environment.json) before running. NOTE: there is no self-service admin signup — register a user via Auth > Register, then run `UPDATE users SET role='admin' WHERE user_id = <id>` directly against the local MySQL db, then use Admin - Client Management > Admin Login with adminEmail/adminPassword set to that account.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "variable": [
-    { "key": "baseUrl", "value": "http://localhost:5000", "type": "string" },
-    { "key": "clientEmail", "value": "", "type": "string" },
-    { "key": "clientPassword", "value": "", "type": "string" },
-    { "key": "accessToken", "value": "", "type": "string" },
-    { "key": "refreshToken", "value": "", "type": "string" },
-    { "key": "clientId", "value": "", "type": "string" },
-    { "key": "adminEmail", "value": "", "type": "string" },
-    { "key": "adminPassword", "value": "", "type": "string" },
-    { "key": "adminAccessToken", "value": "", "type": "string" }
-  ],
   "item": [
     {
       "name": "Health",
@@ -23,7 +12,15 @@
           "name": "Health Check",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
           },
           "event": [
             {
@@ -48,8 +45,8 @@
               "listen": "prerequest",
               "script": {
                 "exec": [
-                  "pm.collectionVariables.set('clientEmail', 'postman.client.' + Date.now() + '@example.test');",
-                  "pm.collectionVariables.set('clientPassword', 'StrongPass123');"
+                  "pm.environment.set('clientEmail', 'postman.client.' + Date.now() + '@example.test');",
+                  "pm.environment.set('clientPassword', 'StrongPass123');"
                 ]
               }
             },
@@ -60,9 +57,9 @@
                   "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
                   "const data = pm.response.json();",
                   "if (data.success && data.data) {",
-                  "  pm.collectionVariables.set('accessToken', data.data.accessToken);",
-                  "  pm.collectionVariables.set('refreshToken', data.data.refreshToken);",
-                  "  pm.collectionVariables.set('clientId', String(data.data.user.userId));",
+                  "  pm.environment.set('accessToken', data.data.accessToken);",
+                  "  pm.environment.set('refreshToken', data.data.refreshToken);",
+                  "  pm.environment.set('clientId', String(data.data.user.userId));",
                   "}"
                 ]
               }
@@ -70,15 +67,26 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"firstName\": \"Postman\",\n  \"lastName\": \"Client\",\n  \"contactNo\": \"09171234567\",\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"{{clientPassword}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/users/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "register"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "register"
+              ]
             }
           }
         },
@@ -92,8 +100,8 @@
                   "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
                   "const data = pm.response.json();",
                   "if (data.success && data.data) {",
-                  "  pm.collectionVariables.set('accessToken', data.data.accessToken);",
-                  "  pm.collectionVariables.set('refreshToken', data.data.refreshToken);",
+                  "  pm.environment.set('accessToken', data.data.accessToken);",
+                  "  pm.environment.set('refreshToken', data.data.refreshToken);",
                   "}"
                 ]
               }
@@ -101,15 +109,26 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"{{clientPassword}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/users/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
             }
           }
         },
@@ -117,11 +136,25 @@
           "name": "Get Current User (me)",
           "request": {
             "method": "GET",
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}" }] },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
             "url": {
               "raw": "{{baseUrl}}/api/users/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
             }
           },
           "event": [
@@ -145,8 +178,8 @@
                   "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
                   "const data = pm.response.json();",
                   "if (data.success && data.data) {",
-                  "  pm.collectionVariables.set('accessToken', data.data.accessToken);",
-                  "  pm.collectionVariables.set('refreshToken', data.data.refreshToken);",
+                  "  pm.environment.set('accessToken', data.data.accessToken);",
+                  "  pm.environment.set('refreshToken', data.data.refreshToken);",
                   "}"
                 ]
               }
@@ -154,12 +187,26 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
             "url": {
               "raw": "{{baseUrl}}/api/users/refresh",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "refresh"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "refresh"
+              ]
             }
           }
         },
@@ -167,12 +214,26 @@
           "name": "Logout",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
             "url": {
               "raw": "{{baseUrl}}/api/users/logout",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "logout"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "logout"
+              ]
             }
           },
           "event": [
@@ -195,16 +256,35 @@
           "name": "Update My Profile",
           "request": {
             "method": "PATCH",
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}" }] },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"firstName\": \"PostmanUpdated\",\n  \"address\": \"123 Sample Street\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/users/me",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "me"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me"
+              ]
             }
           },
           "event": [
@@ -222,16 +302,36 @@
           "name": "Change My Password",
           "request": {
             "method": "PATCH",
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}" }] },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"currentPassword\": \"{{clientPassword}}\",\n  \"newPassword\": \"NewerPass456\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/users/me/password",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "me", "password"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "password"
+              ]
             }
           },
           "event": [
@@ -240,7 +340,7 @@
               "script": {
                 "exec": [
                   "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-                  "if (pm.response.code === 200) { pm.collectionVariables.set('clientPassword', 'NewerPass456'); }"
+                  "if (pm.response.code === 200) { pm.environment.set('clientPassword', 'NewerPass456'); }"
                 ]
               }
             }
@@ -250,13 +350,36 @@
           "name": "Deactivate My Account",
           "request": {
             "method": "POST",
-            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{accessToken}}" }] },
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"password\": \"{{clientPassword}}\"\n}" },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"{{clientPassword}}\"\n}"
+            },
             "url": {
               "raw": "{{baseUrl}}/api/users/me/deactivate",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "me", "deactivate"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "deactivate"
+              ]
             }
           },
           "event": [
@@ -285,7 +408,7 @@
                   "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
                   "const data = pm.response.json();",
                   "if (data.success && data.data) {",
-                  "  pm.collectionVariables.set('adminAccessToken', data.data.accessToken);",
+                  "  pm.environment.set('adminAccessToken', data.data.accessToken);",
                   "}"
                 ]
               }
@@ -293,15 +416,26 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/users/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "login"
+              ]
             }
           }
         },
@@ -311,15 +445,31 @@
             "method": "GET",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{adminAccessToken}}" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/users?page=1&limit=20",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users"
+              ],
               "query": [
-                { "key": "page", "value": "1" },
-                { "key": "limit", "value": "20" }
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
               ]
             }
           },
@@ -340,12 +490,23 @@
             "method": "GET",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{adminAccessToken}}" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/users/{{clientId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "{{clientId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{clientId}}"
+              ]
             }
           },
           "event": [
@@ -365,12 +526,24 @@
             "method": "PATCH",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{adminAccessToken}}" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/users/{{clientId}}/activate",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "{{clientId}}", "activate"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{clientId}}",
+                "activate"
+              ]
             }
           },
           "event": [
@@ -390,12 +563,24 @@
             "method": "PATCH",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{adminAccessToken}}" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/users/{{clientId}}/deactivate",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "{{clientId}}", "deactivate"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{clientId}}",
+                "deactivate"
+              ]
             }
           },
           "event": [
@@ -415,13 +600,2522 @@
             "method": "DELETE",
             "auth": {
               "type": "bearer",
-              "bearer": [{ "key": "token", "value": "{{adminAccessToken}}" }]
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/users/{{clientId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "users", "{{clientId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "{{clientId}}"
+              ]
             }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Features",
+      "item": [
+        {
+          "name": "Create Feature (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"featureName\": \"Booking Management\",\n  \"category\": \"Business Module\",\n  \"description\": \"Online appointments\",\n  \"price\": 15000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/features",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "features"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data) { pm.environment.set('featureId', String(data.data.feature.featureId)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Extra Feature (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"featureName\": \"Payment Gateway\",\n  \"category\": \"Payment\",\n  \"description\": \"GCash/Stripe integration\",\n  \"price\": 12000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/features",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "features"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data) { pm.environment.set('extraFeatureId', String(data.data.feature.featureId)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Features",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/features?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "features"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Feature By Id",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/features/{{featureId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "features",
+                "{{featureId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Feature (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 16000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/features/{{featureId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "features",
+                "{{featureId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Feature (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/features/{{featureId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "features",
+                "{{featureId}}"
+              ]
+            },
+            "description": "Run this LAST, only if you want to test catalog deletion — it removes the feature used by earlier requests in this folder."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Bundles",
+      "item": [
+        {
+          "name": "Create Fixed Bundle (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bundleName\": \"Business Website\",\n  \"description\": \"Fixed-price business package\",\n  \"pricingType\": \"Fixed\",\n  \"price\": 35000,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bundles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bundles"
+              ]
+            },
+            "description": "Fixed bundles must include a price. grandTotal on a quotation for a Fixed bundle equals this flat price only — its linked features (if any) are informational and are NOT separately added to the total."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data) { pm.environment.set('fixedBundleId', String(data.data.bundle.bundleId)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Manual Bundle (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bundleName\": \"Custom Website\",\n  \"description\": \"Manual quote built from individual features\",\n  \"pricingType\": \"Manual\",\n  \"isActive\": true,\n  \"featureIds\": [{{featureId}}]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bundles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bundles"
+              ]
+            },
+            "description": "Manual bundles must NOT include a price (it's priced by summing whichever linked features are attached). Run Features > Create Feature first so {{featureId}} is set."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data) { pm.environment.set('manualBundleId', String(data.data.bundle.bundleId)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Bundles",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bundles?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bundles"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "As a client token, only active bundles are returned. Swap the bearer token to {{adminAccessToken}} to see inactive ones too."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Bundle By Id",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bundles/{{fixedBundleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bundles",
+                "{{fixedBundleId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Bundle (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated via Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bundles/{{fixedBundleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bundles",
+                "{{fixedBundleId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Attach Feature to Bundle (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"featureIds\": [{{extraFeatureId}}]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bundles/{{manualBundleId}}/features",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bundles",
+                "{{manualBundleId}}",
+                "features"
+              ]
+            },
+            "description": "Re-attaching a feature already linked is idempotent (200, no duplicate row)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detach Feature from Bundle (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bundles/{{manualBundleId}}/features/{{extraFeatureId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bundles",
+                "{{manualBundleId}}",
+                "features",
+                "{{extraFeatureId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate Bundle (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bundles/{{fixedBundleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bundles",
+                "{{fixedBundleId}}"
+              ]
+            },
+            "description": "Optional: run this to test that clients get 404 on this bundle afterward and that creating a quotation against it returns 409. Run AFTER the Quotations folder if you want the Create Quotation requests to succeed first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Bundle (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bundles/{{fixedBundleId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bundles",
+                "{{fixedBundleId}}"
+              ]
+            },
+            "description": "Optional/last step. Existing quotations against this bundle survive with bundle_id set to NULL (verified by QA)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Quotations",
+      "item": [
+        {
+          "name": "Create Quotation - Fixed Bundle (Client)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bundleId\": {{fixedBundleId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quotations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quotations"
+              ]
+            },
+            "description": "Run Bundles > Create Fixed Bundle first. subtotal/grandTotal should equal exactly the bundle's flat price, discount/tax 0, status Pending."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data) {",
+                  "  pm.environment.set('quotationId', String(data.data.quotation.quotationId));",
+                  "  pm.test('grandTotal equals bundle price only', function () {",
+                  "    pm.expect(Number(data.data.quotation.grandTotal)).to.equal(Number(data.data.quotation.subtotal));",
+                  "  });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Quotation - Fixed Bundle + Extra Feature (Client)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bundleId\": {{fixedBundleId}},\n  \"extraFeatureIds\": [{{featureId}}]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quotations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quotations"
+              ]
+            },
+            "description": "subtotal should equal bundle price + the extra feature's price."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data) { pm.environment.set('quotationId', String(data.data.quotation.quotationId)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Quotation - Manual Bundle (Client)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bundleId\": {{manualBundleId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quotations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quotations"
+              ]
+            },
+            "description": "subtotal should equal the sum of the Manual bundle's linked features (no bundle base price)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data) { pm.environment.set('quotationId', String(data.data.quotation.quotationId)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List My Quotations (Client)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quotations?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quotations"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Only returns quotations owned by this client, regardless of any clientId filter."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Quotation By Id (Client)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quotations/{{quotationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quotations",
+                "{{quotationId}}"
+              ]
+            },
+            "description": "A different client's token gets 404 here, not 403 — ownership is hidden as non-existence."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List All Quotations (Admin)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quotations?status=Pending&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quotations"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "Pending"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Quotation By Id (Admin)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quotations/{{quotationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quotations",
+                "{{quotationId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve Quotation (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Approved\",\n  \"discount\": 1000,\n  \"tax\": 500\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quotations/{{quotationId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quotations",
+                "{{quotationId}}",
+                "status"
+              ]
+            },
+            "description": "Approving auto-creates a Project (captured into {{projectId}}) and sets quotations.approvedAt in the same transaction."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data) {",
+                  "  pm.test('approvedAt is set', function () { pm.expect(data.data.quotation.approvedAt).to.not.be.null; });",
+                  "  if (data.data.project) {",
+                  "    pm.test('project auto-created', function () { pm.expect(data.data.project.projectId).to.be.a('number'); });",
+                  "    pm.environment.set('projectId', String(data.data.project.projectId));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject Quotation (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Rejected\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/quotations/{{quotationId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "quotations",
+                "{{quotationId}}",
+                "status"
+              ]
+            },
+            "description": "Use this on a DIFFERENT (still-Pending) quotationId than the one Approved above, since a quotation can only be finalized once."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Uploads",
+      "item": [
+        {
+          "name": "Upload My Avatar (Client)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "avatar",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/avatar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "avatar"
+              ]
+            },
+            "description": "Click the 'avatar' field's Select Files button and choose a JPEG/PNG/WebP under 5MB before sending. Uploads to Supabase Storage; response's avatarUrl is a public, unauthenticated URL. Verified working 2026-07-09 with a real 1x1 PNG (confirmed present in storage.objects and publicly fetchable)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.success) {",
+                  "  pm.test('avatarUrl is set', function () { pm.expect(data.data.user.avatarUrl).to.be.a('string').and.not.empty; });",
+                  "  if (data.data.user.avatarUrl) { pm.environment.set('avatarUrl', data.data.user.avatarUrl); }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete My Avatar (Client)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/me/avatar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "me",
+                "avatar"
+              ]
+            },
+            "description": "Removes the avatar from Supabase Storage and nulls avatarUrl. Safe to call even if no avatar is set (no-op, still 200)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.environment.set('avatarUrl', '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload Bundle Image (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bundles/{{fixedBundleId}}/image",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bundles",
+                "{{fixedBundleId}}",
+                "image"
+              ]
+            },
+            "description": "Run Bundles > Create Fixed Bundle first. Click the 'image' field's Select Files button and choose a JPEG/PNG/WebP under 5MB before sending."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.success) {",
+                  "  pm.test('imageUrl is set', function () { pm.expect(data.data.bundle.imageUrl).to.be.a('string').and.not.empty; });",
+                  "  if (data.data.bundle.imageUrl) { pm.environment.set('bundleImageUrl', data.data.bundle.imageUrl); }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Bundle Image (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/bundles/{{fixedBundleId}}/image",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bundles",
+                "{{fixedBundleId}}",
+                "image"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.environment.set('bundleImageUrl', '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload Feature Image (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/features/{{featureId}}/image",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "features",
+                "{{featureId}}",
+                "image"
+              ]
+            },
+            "description": "Run Features > Create Feature first. Click the 'image' field's Select Files button and choose a JPEG/PNG/WebP under 5MB before sending."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.success) {",
+                  "  pm.test('imageUrl is set', function () { pm.expect(data.data.feature.imageUrl).to.be.a('string').and.not.empty; });",
+                  "  if (data.data.feature.imageUrl) { pm.environment.set('featureImageUrl', data.data.feature.imageUrl); }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Feature Image (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/features/{{featureId}}/image",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "features",
+                "{{featureId}}",
+                "image"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.environment.set('featureImageUrl', '');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "List My Projects (Client)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/projects?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Run Quotations > Approve Quotation first so a project exists."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Project By Id",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Project (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"In Progress\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/projects/{{projectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "projects",
+                "{{projectId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Project Updates",
+      "item": [
+        {
+          "name": "Create Project Update (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": {{projectId}},\n  \"title\": \"Kickoff\",\n  \"description\": \"Project kicked off with the client\",\n  \"progress\": 25\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/project-updates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "project-updates"
+              ]
+            },
+            "description": "Sets the project's overallProgress to this absolute value (not additive) — check via Projects > Get Project By Id afterward."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data) { pm.environment.set('updateId', String(data.data.update.updateId)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Project Updates",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/project-updates?projectId={{projectId}}&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "project-updates"
+              ],
+              "query": [
+                {
+                  "key": "projectId",
+                  "value": "{{projectId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Project Update By Id",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/project-updates/{{updateId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "project-updates",
+                "{{updateId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Project Milestones",
+      "item": [
+        {
+          "name": "Create Milestone (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": {{projectId}},\n  \"title\": \"Deposit\",\n  \"requiredProgressPercentage\": 0,\n  \"amount\": 15000,\n  \"dueDate\": \"2026-08-01\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/project-milestones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "project-milestones"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data) { pm.environment.set('milestoneId', String(data.data.milestone.milestoneId)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Milestones",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/project-milestones?projectId={{projectId}}&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "project-milestones"
+              ],
+              "query": [
+                {
+                  "key": "projectId",
+                  "value": "{{projectId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Milestone By Id",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/project-milestones/{{milestoneId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "project-milestones",
+                "{{milestoneId}}"
+              ]
+            },
+            "description": "Response includes a computed isOverdue boolean."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Milestone (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Deposit - Updated\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/project-milestones/{{milestoneId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "project-milestones",
+                "{{milestoneId}}"
+              ]
+            },
+            "description": "amount/requiredProgressPercentage become locked (409) once the milestone status is Paid; title/dueDate remain editable."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Milestone (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/project-milestones/{{milestoneId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "project-milestones",
+                "{{milestoneId}}"
+              ]
+            },
+            "description": "409 if any payment references this milestone — only run against a fresh milestone with no payments."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Payment Methods",
+      "item": [
+        {
+          "name": "Create Payment Method (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"methodName\": \"Bank Transfer - BDO\",\n  \"accountName\": \"Codehaus Inc\",\n  \"accountNumber\": \"1234567890\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment-methods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment-methods"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data) {",
+                  "  pm.test('methodType defaults to manual', function () { pm.expect(data.data.method.methodType).to.equal('manual'); });",
+                  "  pm.environment.set('methodId', String(data.data.method.methodId));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Payment Methods",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment-methods?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment-methods"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "As a client token, only active methods are returned."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Payment Method By Id",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment-methods/{{methodId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment-methods",
+                "{{methodId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Payment Method (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accountNumber\": \"0987654321\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment-methods/{{methodId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment-methods",
+                "{{methodId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload QR Code (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "qrCode",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment-methods/{{methodId}}/qr-code",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment-methods",
+                "{{methodId}}",
+                "qr-code"
+              ]
+            },
+            "description": "Select a JPEG/PNG/WebP under 5MB before sending."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data.method.qrCodeUrl) { pm.environment.set('qrCodeUrl', data.data.method.qrCodeUrl); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete QR Code (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment-methods/{{methodId}}/qr-code",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment-methods",
+                "{{methodId}}",
+                "qr-code"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.environment.set('qrCodeUrl', '');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deactivate Payment Method (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment-methods/{{methodId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment-methods",
+                "{{methodId}}"
+              ]
+            },
+            "description": "Run this to confirm the method disappears from a client's list/get (404) while admin still sees it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Payment Method (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment-methods/{{methodId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment-methods",
+                "{{methodId}}"
+              ]
+            },
+            "description": "409 if this method has payment history — only run against a fresh method with no payments, otherwise deactivate instead."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Submit Payment (Client)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"milestoneId\": {{milestoneId}},\n  \"methodId\": {{methodId}},\n  \"amountPaid\": 15000,\n  \"referenceNumber\": \"REF123456\",\n  \"paymentDate\": \"2026-07-10\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments"
+              ]
+            },
+            "description": "Blocked with 409 if this milestone already has a Pending/Verified payment, or is already Paid."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () { pm.response.to.have.status(201); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data) {",
+                  "  pm.test('paymentStatus is Pending', function () { pm.expect(data.data.payment.paymentStatus).to.equal('Pending'); });",
+                  "  pm.environment.set('paymentId', String(data.data.payment.paymentId));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload Payment Proof (Client)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "proofImage",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/{{paymentId}}/proof",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "{{paymentId}}",
+                "proof"
+              ]
+            },
+            "description": "Select a JPEG/PNG/WebP under 5MB. Required before an admin can Verify (not Reject) this payment."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "if (data.success && data.data.payment.proofImageUrl) { pm.environment.set('proofImageUrl', data.data.payment.proofImageUrl); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List My Payments (Client)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Payment By Id",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/{{paymentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "{{paymentId}}"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Payment (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Verified\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/{{paymentId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "{{paymentId}}",
+                "status"
+              ]
+            },
+            "description": "400 if proof has not been uploaded yet. On success, flips the milestone to Paid — check via Project Milestones > Get Milestone By Id."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reject Payment (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{adminAccessToken}}"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Rejected\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/{{paymentId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "{{paymentId}}",
+                "status"
+              ]
+            },
+            "description": "Use on a DIFFERENT still-Pending payment than the one Verified above — a payment can only be finalized once. Rejection does NOT mark the milestone Paid, and allows a new payment to be submitted for the same milestone."
           },
           "event": [
             {
